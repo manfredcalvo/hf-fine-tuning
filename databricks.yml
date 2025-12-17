@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=bundle_config_schema.json
+bundle:
+  name: ft-hf
+
+variables:
+  catalog:
+    default: fox_sports_dev
+  schema:
+    default: champ_ai
+  registered_model_name:
+    default: sports_ai
+
+include:
+  - ./resources/*.yml
+
+targets:
+  dev:
+    default: true
+    workspace:
+      host: https://e2-demo-field-eng.cloud.databricks.com/
+    permissions:
+      - level: CAN_RUN
+        user_name: manffred.calvosanchez@databricks.com
+      - level: CAN_VIEW
+        group_name: users

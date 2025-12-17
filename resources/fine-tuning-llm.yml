@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=../../bundle_config_schema.json
+common: &common
+  tags:
+    project: ft-llm
+    environment: ${bundle.target}
+
+resources:
+  jobs:
+    FineTuning_Pipeline:
+      name: FineTuning Pipeline
+      tasks:
+        - task_key: Data_Processing
+          notebook_task:
+            notebook_path: ../notebooks/01 - Data Processing
+            base_parameters:
+              CATALOG: ""
+              SCHEMA: ""
+            source: WORKSPACE
+        - task_key: Model_Fine_Tuning
+          depends_on:
+            - task_key: Data_Processing
+          notebook_task:
+            notebook_path: ../notebooks/02 - Fine Tuning Model
+            base_parameters:
+              CATALOG: ""
+              SCHEMA: ""
+              MODEL_NAME: ""
+            source: WORKSPACE
+          environment_key: Model_Fine_Tuning_environment
+        - task_key: Log_Model
+          depends_on:
+            - task_key: Model_Fine_Tuning
+          notebook_task:
+            notebook_path: ../notebooks/03 - Log Model
+            base_parameters:
+              CATALOG: ""
+              SCHEMA: ""
+              MODEL_NAME: ""
+              MODEL_PATH: ""
+            source: WORKSPACE
+        - task_key: Deploy_Model
+          depends_on:
+            - task_key: Log_Model
+          notebook_task:
+            notebook_path: ../notebooks/04 - Model Deployment
+            base_parameters:
+              CATALOG: ""
+              SCHEMA: ""
+              MODEL_NAME: ""
+              ENDPOINT_NAME: ""
+            source: WORKSPACE
+        - task_key: Model_Evaluation
+          depends_on:
+            - task_key: Deploy_Model
+          notebook_task:
+            notebook_path: ../notebooks/05 - Model Evaluation
+            base_parameters:
+              CATALOG: ""
+              SCHEMA: ""
+            source: WORKSPACE
+      queue:
+        enabled: true
+      environments:
+        - environment_key: Model_Fine_Tuning_environment
+          spec:
+            environment_version: "4"
+      performance_target: PERFORMANCE_OPTIMIZED
