@@ -64,6 +64,7 @@ from databricks.sdk.service.serving import (
     EndpointCoreConfigInput,
     ServedEntityInput,
 )
+from datetime import timedelta
 
 def create_or_update_serving_endpoint_and_wait(
     name: str,
@@ -105,12 +106,14 @@ def create_or_update_serving_endpoint_and_wait(
         ep = w.serving_endpoints.update_config_and_wait(
             name=name,
             served_entities=served_entities,
+            timeout=timedelta(minutes=30),
         )
     else:
         # Create new endpoint and wait until deployment completes
         ep = w.serving_endpoints.create_and_wait(
             name=name,
             config=config,
+            timeout=timedelta(minutes=30)
         )
 
     # Optional: extra safety check on final state
