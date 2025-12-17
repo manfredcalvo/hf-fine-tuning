@@ -27,8 +27,9 @@ resources:
               MODEL_NAME: ${var.model_name}
               MODEL_PATH: ${var.model_path}
             source: WORKSPACE
+            environment_key: gpu_environment
             queue:
-              queue_name: "SERVERLESS_GPU"
+              queue_name: "GPU_SERVERLESS"
           environment_key: Model_Fine_Tuning_environment
         - task_key: Log_Model
           depends_on:
@@ -41,8 +42,9 @@ resources:
               MODEL_NAME: ${var.model_name}
               MODEL_PATH: ${var.model_path}
             source: WORKSPACE
+            environment_key: gpu_environment
             queue:
-              queue_name: "SERVERLESS_GPU"
+              queue_name: "GPU_SERVERLESS"
         - task_key: Deploy_Model
           depends_on:
             - task_key: Log_Model
@@ -64,10 +66,8 @@ resources:
               SCHEMA: ${var.schema}
               MODEL_LIST: ${var.model_list}
             source: WORKSPACE
-      queue:
-        enabled: true
       environments:
-        - environment_key: Model_Fine_Tuning_environment
+        - environment_key: gpu_environment
           spec:
             environment_version: "4"
       performance_target: PERFORMANCE_OPTIMIZED
