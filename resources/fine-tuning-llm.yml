@@ -11,52 +11,53 @@ resources:
       tasks:
         - task_key: Data_Processing
           notebook_task:
-            notebook_path: ../notebooks/01 - Data Processing
+            notebook_path: ../notebooks/01 - Data Processing.py
             base_parameters:
-              CATALOG: ""
-              SCHEMA: ""
+              CATALOG: ${var.catalog}
+              SCHEMA: ${var.schema}
             source: WORKSPACE
         - task_key: Model_Fine_Tuning
           depends_on:
             - task_key: Data_Processing
           notebook_task:
-            notebook_path: ../notebooks/02 - Fine Tuning Model
+            notebook_path: ../notebooks/02 - Fine Tuning Model.py
             base_parameters:
-              CATALOG: ""
-              SCHEMA: ""
-              MODEL_NAME: ""
+              CATALOG: ${var.catalog}
+              SCHEMA: ${var.schema}
+              MODEL_NAME: ${var.model_name}
+              MODEL_PATH: ${var.model_path}
             source: WORKSPACE
           environment_key: Model_Fine_Tuning_environment
         - task_key: Log_Model
           depends_on:
             - task_key: Model_Fine_Tuning
           notebook_task:
-            notebook_path: ../notebooks/03 - Log Model
+            notebook_path: ../notebooks/03 - Log Model.py
             base_parameters:
-              CATALOG: ""
-              SCHEMA: ""
-              MODEL_NAME: ""
-              MODEL_PATH: ""
+              CATALOG: ${var.catalog}
+              SCHEMA: ${var.schema}
+              MODEL_NAME: ${var.model_name}
+              MODEL_PATH: ${var.model_path}
             source: WORKSPACE
         - task_key: Deploy_Model
           depends_on:
             - task_key: Log_Model
           notebook_task:
-            notebook_path: ../notebooks/04 - Model Deployment
+            notebook_path: ../notebooks/04 - Model Deployment.py
             base_parameters:
-              CATALOG: ""
-              SCHEMA: ""
-              MODEL_NAME: ""
-              ENDPOINT_NAME: ""
+              CATALOG: ${var.catalog}
+              SCHEMA: ${var.schema}
+              MODEL_NAME: ${var.model_name}
+              ENDPOINT_NAME: ${var.endpoint_name}
             source: WORKSPACE
         - task_key: Model_Evaluation
           depends_on:
             - task_key: Deploy_Model
           notebook_task:
-            notebook_path: ../notebooks/05 - Model Evaluation
+            notebook_path: ../notebooks/05 - Model Evaluation.py
             base_parameters:
-              CATALOG: ""
-              SCHEMA: ""
+              CATALOG: ${var.catalog}
+              SCHEMA: ${var.schema}
             source: WORKSPACE
       queue:
         enabled: true

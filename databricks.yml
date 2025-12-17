@@ -4,11 +4,17 @@ bundle:
 
 variables:
   catalog:
-    default: fox_sports_dev
+    default: meli_demo
   schema:
-    default: champ_ai
-  registered_model_name:
-    default: sports_ai
+    default: default
+  endpoint_name:
+    default: deepseek_ft_playground_rag
+  model_list:
+    default: deepseek_ft_playground_rag,databricks-llama-4-maverick
+  model_name:
+    default: deepseek_rag_chat_model
+  model_path:
+    default: /Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/
 
 include:
   - ./resources/*.yml
