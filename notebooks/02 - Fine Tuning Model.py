@@ -152,17 +152,17 @@ print(f"Parámetros totales: {total_params:,}")
 
 # COMMAND ----------
 
-from transformers import TrainingArguments
-from trl import SFTTrainer
+from trl import SFTConfig, SFTTrainer
 
-training_args = TrainingArguments(
+# Configuración correcta usando SFTConfig
+training_args = SFTConfig(
     output_dir=output_dir,
     num_train_epochs=1,  # Número de epochs de entrenamiento
     per_device_train_batch_size=2,  # Batch size por dispositivo GPU
     per_device_eval_batch_size=2,  # Batch size de evaluación por dispositivo GPU
     gradient_accumulation_steps=8,  # Acumulación de gradientes (batch efectivo = 16)
     gradient_checkpointing=True,  # Activar para reducir uso de memoria
-    optim="adamw_torch", # Optimizador AdamW de PyTorch
+    optim="adamw_torch",  # Optimizador AdamW de PyTorch
     learning_rate=2e-4,  # Learning rate para LoRA
     lr_scheduler_type="cosine",  # Scheduler de learning rate tipo coseno
     warmup_ratio=0.03,  # Proporción de warmup
@@ -176,12 +176,13 @@ training_args = TrainingArguments(
     bf16=True,  # Usar bfloat16 para mayor estabilidad
     max_grad_norm=0.3,  # Clipping de gradiente
     max_steps=-1,  # Entrenar por número de epochs
-    group_by_length=True,  # Agrupar secuencias por longitud para eficiencia
     report_to="mlflow",  # Reportar a MLflow
-    seed=42
+    seed=42,
+    packing=True,       # Reemplaza group_by_length, empaqueta secuencias para mayor eficiencia
+    max_seq_length=512  # Requerido al usar packing
 )
 
-# Inicializar SFTTrainer (API simplificada de TRL)
+# Inicializar SFTTrainer
 trainer = SFTTrainer(
     model=model,
     train_dataset=train_dataset,
