@@ -15,6 +15,7 @@ resources:
             base_parameters:
               CATALOG: ${var.catalog}
               SCHEMA: ${var.schema}
+              VOLUME: ${var.volume}
             source: WORKSPACE
         - task_key: Model_Fine_Tuning
           depends_on:

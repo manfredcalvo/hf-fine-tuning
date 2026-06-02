@@ -15,6 +15,8 @@ variables:
     default: deepseek_rag_chat_model
   model_path:
     default: /Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/
+  volume:
+    default: datasets
 
 include:
   - ./resources/*.yml

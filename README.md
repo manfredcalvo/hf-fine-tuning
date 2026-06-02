@@ -24,10 +24,53 @@ Each stage is a Databricks notebook run as a sequential job task. GPU-intensive 
 
 - Databricks CLI with Asset Bundles support (`databricks bundle`)
 - Access to `e2-demo-field-eng.cloud.databricks.com`
-- A Unity Catalog volume to store the fine-tuned model weights
-- Training and evaluation datasets pre-loaded as Delta tables:
-  - `{catalog}.{schema}.chat_completion_training_dataset`
-  - `{catalog}.{schema}.chat_completion_evaluation_dataset`
+- A Unity Catalog volume to store the training CSVs and fine-tuned model weights
+- The two dataset CSV files locally available:
+  - `chat_completion_training_dataset.csv`
+  - `chat_completion_evaluation_dataset.csv`
+
+## Uploading Training Data to the Volume
+
+Before running the pipeline, upload the CSV files to the Unity Catalog volume. The `CATALOG`, `SCHEMA`, and `VOLUME` values must match the bundle variables in `databricks.yml`.
+
+**Using the Databricks SDK:**
+
+```python
+from databricks.sdk import WorkspaceClient
+
+CATALOG = "meli_demo"
+SCHEMA  = "default"
+VOLUME  = "datasets"
+
+w = WorkspaceClient(profile="e2-demo-field-eng")
+
+files = [
+    "chat_completion_training_dataset.csv",
+    "chat_completion_evaluation_dataset.csv",
+]
+
+for file_name in files:
+    volume_path = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}/{file_name}"
+    with open(file_name, "rb") as f:
+        w.files.upload(volume_path, f, overwrite=True)
+    print(f"Uploaded {file_name} → {volume_path}")
+```
+
+**Using the Databricks CLI:**
+
+```bash
+CATALOG="meli_demo"
+SCHEMA="default"
+VOLUME="datasets"
+
+databricks fs cp chat_completion_training_dataset.csv \
+  /Volumes/$CATALOG/$SCHEMA/$VOLUME/chat_completion_training_dataset.csv \
+  --profile e2-demo-field-eng
+
+databricks fs cp chat_completion_evaluation_dataset.csv \
+  /Volumes/$CATALOG/$SCHEMA/$VOLUME/chat_completion_evaluation_dataset.csv \
+  --profile e2-demo-field-eng
+```
 
 ## Configuration
 
@@ -37,6 +80,7 @@ Bundle variables are defined in `databricks.yml` and can be overridden per targe
 |---|---|---|
 | `catalog` | `meli_demo` | Unity Catalog catalog name |
 | `schema` | `default` | Schema name |
+| `volume` | `datasets` | Volume name where training CSVs are stored |
 | `model_name` | `deepseek_rag_chat_model` | Registered model name in UC |
 | `model_path` | `/Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/` | Volume path to save the merged model |
 | `endpoint_name` | `deepseek_ft_playground_rag` | Model Serving endpoint name |
