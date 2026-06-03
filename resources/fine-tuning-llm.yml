@@ -29,8 +29,8 @@ resources:
               MODEL_PATH: ${var.model_path}
             source: WORKSPACE
           environment_key: gpu_environment
-          queue:
-            queue_name: "GPU_SERVERLESS"
+          compute:
+            hardware_accelerator: GPU_8xH100
         - task_key: Log_Model
           depends_on:
             - task_key: Model_Fine_Tuning
@@ -43,8 +43,8 @@ resources:
               MODEL_PATH: ${var.model_path}
             source: WORKSPACE
           environment_key: gpu_environment
-          queue:
-            queue_name: "GPU_SERVERLESS"
+          compute:
+            hardware_accelerator: GPU_8xH100
         - task_key: Deploy_Model
           depends_on:
             - task_key: Log_Model
