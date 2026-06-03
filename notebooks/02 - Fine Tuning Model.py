@@ -178,7 +178,8 @@ training_args = SFTConfig(
     max_steps=-1,  # Entrenar por número de epochs
     report_to="mlflow",  # Reportar a MLflow
     seed=42,
-    packing=True,  # Reemplaza group_by_length, empaqueta secuencias para mayor eficiencia
+    packing=True,      # Reemplaza group_by_length, empaqueta secuencias para mayor eficiencia
+    max_length=512,    # Longitud máxima de secuencia, requerido al usar packing
 )
 
 # Inicializar SFTTrainer
@@ -188,7 +189,6 @@ trainer = SFTTrainer(
     eval_dataset=eval_dataset,
     peft_config=lora_config,
     args=training_args,
-    max_seq_length=512,  # Requerido al usar packing
 )
 
 # COMMAND ----------
