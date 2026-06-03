@@ -33,8 +33,8 @@ MODEL_PATH = dbutils.widgets.get("MODEL_PATH")
 # COMMAND ----------
 
 base_model = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
-output_dir = "/tmp/deepseek_finetuned"
-adapter_dir = "/tmp/deepseek_lora_adapters"
+output_dir = "/local_disk0/deepseek_finetuned"
+adapter_dir = "/local_disk0/deepseek_lora_adapters"
 
 # COMMAND ----------
 
@@ -279,6 +279,7 @@ print(generated_response)
 
 # COMMAND ----------
 
-merged_model = model.merge_and_unload()
+# SFTTrainer gestiona el PeftModel internamente, se accede desde trainer.model
+merged_model = trainer.model.merge_and_unload()
 merged_model.save_pretrained(MODEL_PATH)
 tokenizer.save_pretrained(MODEL_PATH)
