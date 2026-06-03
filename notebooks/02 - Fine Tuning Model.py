@@ -111,12 +111,12 @@ eval_dataset = datasets.Dataset.from_list(eval_records)
 
 # COMMAND ----------
 
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig
 
 if hasattr(model, 'gradient_checkpointing_enable'):
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
-# Configuración de LoRA
+# Configuración de LoRA — SFTTrainer aplica los adaptadores internamente
 lora_config = LoraConfig(
     r=16,  # Rango de las matrices de actualización
     lora_alpha=32,  # Factor de escalado para LoRA
@@ -133,15 +133,6 @@ lora_config = LoraConfig(
     bias="none",  # No entrenar parámetros de bias
     task_type="CAUSAL_LM"  # Tipo de tarea para lenguaje causal
 )
-
-# Aplicar LoRA al modelo
-model = get_peft_model(model, lora_config)
-
-# Imprimir parámetros entrenables
-trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-total_params = sum(p.numel() for p in model.parameters())
-print(f"Parámetros entrenables: {trainable_params:,} ({100 * trainable_params / total_params:.2f}%)")
-print(f"Parámetros totales: {total_params:,}")
 
 # COMMAND ----------
 
