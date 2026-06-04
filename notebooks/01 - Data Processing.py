@@ -20,12 +20,14 @@
 dbutils.widgets.text("CATALOG", "meli_demo")
 dbutils.widgets.text("SCHEMA", "default")
 dbutils.widgets.text("VOLUME", "datasets")
+dbutils.widgets.text("BASE_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Llama-8B")
 
 # COMMAND ----------
 
 CATALOG = dbutils.widgets.get("CATALOG")
 SCHEMA = dbutils.widgets.get("SCHEMA")
 VOLUME = dbutils.widgets.get("VOLUME")
+BASE_MODEL = dbutils.widgets.get("BASE_MODEL")
 
 # Construir el path del volumen a partir del catálogo y esquema
 DATA_VOLUME_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME}"

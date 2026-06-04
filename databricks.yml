@@ -17,6 +17,8 @@ variables:
     default: /Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/
   volume:
     default: datasets
+  base_model:
+    default: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
 
 include:
   - ./resources/*.yml

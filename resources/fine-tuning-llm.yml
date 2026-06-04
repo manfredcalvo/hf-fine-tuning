@@ -16,6 +16,7 @@ resources:
               CATALOG: ${var.catalog}
               SCHEMA: ${var.schema}
               VOLUME: ${var.volume}
+              BASE_MODEL: ${var.base_model}
             source: WORKSPACE
         - task_key: Model_Fine_Tuning
           depends_on:
@@ -27,6 +28,7 @@ resources:
               SCHEMA: ${var.schema}
               MODEL_NAME: ${var.model_name}
               MODEL_PATH: ${var.model_path}
+              BASE_MODEL: ${var.base_model}
             source: WORKSPACE
           environment_key: gpu_environment
           compute:
@@ -41,6 +43,7 @@ resources:
               SCHEMA: ${var.schema}
               MODEL_NAME: ${var.model_name}
               MODEL_PATH: ${var.model_path}
+              BASE_MODEL: ${var.base_model}
             source: WORKSPACE
           environment_key: gpu_environment
           compute:

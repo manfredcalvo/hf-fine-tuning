@@ -22,6 +22,7 @@ dbutils.widgets.text("CATALOG", "meli_demo")
 dbutils.widgets.text("SCHEMA", "default")
 dbutils.widgets.text("MODEL_NAME", "deepseek_rag_chat_model")
 dbutils.widgets.text("MODEL_PATH", "/Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/")
+dbutils.widgets.text("BASE_MODEL", "deepseek-ai/DeepSeek-R1-Distill-Llama-8B")
 dbutils.widgets.text("train_data_table_name_ft", "chat_completion_training_dataset_ft")
 dbutils.widgets.text("test_data_table_name_ft", "chat_completion_eval_dataset_ft")
 
@@ -31,6 +32,7 @@ CATALOG = dbutils.widgets.get("CATALOG")
 SCHEMA = dbutils.widgets.get("SCHEMA")
 MODEL_NAME = dbutils.widgets.get("MODEL_NAME")
 MODEL_PATH = dbutils.widgets.get("MODEL_PATH")
+BASE_MODEL = dbutils.widgets.get("BASE_MODEL")
 train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 
 # COMMAND ----------
