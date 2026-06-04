@@ -106,17 +106,18 @@ import pandas as pd
 from pyspark.sql.functions import pandas_udf, col
 from pyspark.sql.types import StringType
 
-_tokenizer_cache = {}
+# Broadcast del nombre del modelo para evitar serializar el tokenizer
+base_model_bc = sc.broadcast(BASE_MODEL)
 
-# Capturar BASE_MODEL en el closure para compatibilidad con serverless compute
-_base_model = BASE_MODEL
+_tokenizer_cache = {}
 
 @pandas_udf(StringType())
 def apply_chat_template_udf(messages_col: pd.Series) -> pd.Series:
     from transformers import AutoTokenizer
-    if _base_model not in _tokenizer_cache:
-        _tokenizer_cache[_base_model] = AutoTokenizer.from_pretrained(_base_model, clean_up_tokenization_spaces=False)
-    tokenizer = _tokenizer_cache[_base_model]
+    model_name = base_model_bc.value
+    if model_name not in _tokenizer_cache:
+        _tokenizer_cache[model_name] = AutoTokenizer.from_pretrained(model_name, clean_up_tokenization_spaces=False)
+    tokenizer = _tokenizer_cache[model_name]
     return messages_col.apply(
         lambda msgs: tokenizer.apply_chat_template(
             [{"role": m["role"], "content": m["content"]} for m in msgs],
