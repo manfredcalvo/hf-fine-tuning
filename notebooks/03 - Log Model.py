@@ -135,7 +135,7 @@ train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 # MAGIC       prompt = self.format_chat_template(messages_with_system)
 # MAGIC
 # MAGIC       inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-# MAGIC       streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+# MAGIC       streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True, decode_kwargs={"clean_up_tokenization_spaces": False})
 # MAGIC
 # MAGIC       # Set up generation arguments including max tokens and streamer
 # MAGIC       generation_args = {

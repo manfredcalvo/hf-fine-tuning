@@ -260,7 +260,7 @@ with torch.no_grad():
     )
 
 # Decodificar la respuesta completa
-full_response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+full_response = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
 
 # Extraer solo la parte generada (después del prompt de entrada)
 if full_response.startswith(input_text):
