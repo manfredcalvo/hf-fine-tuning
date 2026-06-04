@@ -51,7 +51,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 # Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(base_model, clean_up_tokenization_spaces=False)
+tokenizer = AutoTokenizer.from_pretrained(base_model)
 tokenizer.pad_token = tokenizer.eos_token  # Set pad token for batch training
 tokenizer.padding_side = "right"  # Pad on the right side for causal LM
 
@@ -229,29 +229,26 @@ with mlflow.start_run() as run:
 
 import torch
 
-# Obtener mensajes de la muestra de evaluación (system + user, sin la respuesta del assistant)
-sample_messages = eval_dataset[0]["messages"][:2]
-
-# Aplicar el chat template nativo con generation prompt para inferencia
-input_ids = tokenizer.apply_chat_template(
-    sample_messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_tensors="pt"
-).to(model.device)
+# Obtener una muestra del conjunto de evaluación (sin la respuesta del assistant)
+sample_text = eval_dataset[0]["text"]
+# Extraer solo las partes de system + user (eliminar la respuesta del assistant para la prueba)
+input_text = sample_text.split("Assistant:")[0].strip() + "\n\nAssistant:"
 
 print("=" * 80)
 print("ENTRADA:")
 print("=" * 80)
-print(tokenizer.decode(input_ids[0], skip_special_tokens=False))
+print(input_text)
 print("\n" + "=" * 80)
 print("RESPUESTA DEL MODELO:")
 print("=" * 80)
 
+# Tokenizar la entrada y mover al dispositivo del modelo
+inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
+
 # Generar respuesta usando model.generate()
 with torch.no_grad():
     outputs = model.generate(
-        input_ids,
+        **inputs,
         max_new_tokens=512,
         do_sample=True,
         temperature=0.7,
@@ -260,9 +257,16 @@ with torch.no_grad():
         pad_token_id=tokenizer.eos_token_id
     )
 
-# Decodificar solo los tokens generados (excluyendo el prompt de entrada)
-generated_ids = outputs[0][input_ids.shape[1]:]
-generated_response = tokenizer.decode(generated_ids, skip_special_tokens=True)
+# Decodificar la respuesta completa
+full_response = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
+
+# Extraer solo la parte generada (después del prompt de entrada)
+if full_response.startswith(input_text):
+    generated_response = full_response[len(input_text):].strip()
+else:
+    # Alternativa: intentar extraer después de "Assistant:"
+    parts = full_response.split("Assistant:", 1)
+    generated_response = parts[1].strip() if len(parts) > 1 else full_response
 
 print(generated_response)
 

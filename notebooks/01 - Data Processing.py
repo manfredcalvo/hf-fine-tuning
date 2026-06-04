@@ -96,35 +96,47 @@ display(chat_training_df.limit(3))
 # MAGIC %md
 # MAGIC ## Preparación de Datos para SFTTrainer
 # MAGIC
-# MAGIC Aplica el chat template nativo del modelo usando `apply_chat_template` del tokenizer.
-# MAGIC Esto garantiza que el formato de entrenamiento sea idéntico al formato de inferencia,
-# MAGIC incluyendo los tokens de control correctos del modelo y preservando los espacios correctamente.
+# MAGIC Convierte el Spark DataFrame al formato de Hugging Face Dataset. SFTTrainer espera un formato específico donde formatearemos los mensajes en texto usando la plantilla de chat de DeepSeek.
 
 # COMMAND ----------
 
-import pandas as pd
-from pyspark.sql.functions import pandas_udf, col
+from pyspark.sql.functions import pandas_udf
 from pyspark.sql.types import StringType
+import pandas as pd
+from typing import List, Dict
 
-# Broadcast del nombre del modelo para evitar serializar el tokenizer
-base_model_bc = sc.broadcast(BASE_MODEL)
+def format_chat_template(messages: List) -> str:
+    """
+    Formatea los mensajes en el template de DeepSeek.
+    DeepSeek utiliza el formato: System: ... \n\nUser: ... \n\nAssistant: ...
+    """
+    formatted_text = ""
+    for message in messages:
+        if isinstance(message, dict):
+            role = message["role"]
+            content = message["content"]
+        elif isinstance(message, list) and len(message) >= 2:
+            role = message[0]
+            content = message[1]
+        else:
+            continue
 
-_tokenizer_cache = {}
+        if role == "system":
+            formatted_text += f"System: {content}\n\n"
+        elif role == "user":
+            formatted_text += f"User: {content}\n\n"
+        elif role == "assistant":
+            formatted_text += f"Assistant: {content}"
+    return formatted_text
 
-@pandas_udf(StringType())
-def apply_chat_template_udf(messages_col: pd.Series) -> pd.Series:
-    from transformers import AutoTokenizer
-    model_name = base_model_bc.value
-    if model_name not in _tokenizer_cache:
-        _tokenizer_cache[model_name] = AutoTokenizer.from_pretrained(model_name, clean_up_tokenization_spaces=False)
-    tokenizer = _tokenizer_cache[model_name]
-    return messages_col.apply(
-        lambda msgs: tokenizer.apply_chat_template(
-            [{"role": m["role"], "content": m["content"]} for m in msgs],
-            tokenize=False,
-            add_generation_prompt=False,
-        )
-    )
+# Definir el pandas UDF con decorador y type hints
+@pandas_udf(returnType=StringType())
+def transform_data(s: pd.Series) -> pd.Series:
+  results = []
+  for val in s:
+    result = format_chat_template(val)
+    results.append(result)
+  return pd.Series(results)
 
 # COMMAND ----------
 
@@ -133,8 +145,9 @@ def apply_chat_template_udf(messages_col: pd.Series) -> pd.Series:
 
 # COMMAND ----------
 
-chat_training_df_ft = chat_training_df.withColumn("text", apply_chat_template_udf(col("messages")))
-chat_eval_df_ft = chat_eval_df.withColumn("text", apply_chat_template_udf(col("messages")))
+chat_training_df_ft = chat_training_df.withColumn("text", transform_data(chat_training_df['messages']))
+chat_eval_df_ft = chat_eval_df.withColumn("text", transform_data(chat_eval_df['messages']))
 
 chat_eval_df_ft.write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.{eval_data_table_name_ft}")
+
 chat_training_df_ft.write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.{train_data_table_name_ft}")

@@ -76,9 +76,9 @@ train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 # MAGIC     def load_context(self, context):
 # MAGIC
 # MAGIC         device = "cuda" if torch.cuda.is_available() else "cpu"
-# MAGIC
+# MAGIC         
 # MAGIC         model_path = context.artifacts["model_path"]
-# MAGIC
+# MAGIC         
 # MAGIC         model = AutoModelForCausalLM.from_pretrained(
 # MAGIC             model_path,
 # MAGIC             dtype=torch.float16,
@@ -86,18 +86,41 @@ train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 # MAGIC             trust_remote_code=True,
 # MAGIC             low_cpu_mem_usage=True
 # MAGIC         )
-# MAGIC
+# MAGIC         
 # MAGIC         tokenizer = AutoTokenizer.from_pretrained(
 # MAGIC             model_path,
-# MAGIC             trust_remote_code=True,
-# MAGIC             clean_up_tokenization_spaces=False,
+# MAGIC             trust_remote_code=True
 # MAGIC         )
-# MAGIC
+# MAGIC         
 # MAGIC         self.pipeline = hf_pipeline(
 # MAGIC             "text-generation",
 # MAGIC             model=model,
 # MAGIC             tokenizer=tokenizer,
 # MAGIC         )
+# MAGIC
+# MAGIC     def format_chat_template(self, messages) -> str:
+# MAGIC         """
+# MAGIC         Formatea los mensajes en el template de DeepSeek.
+# MAGIC         DeepSeek utiliza el formato: System: ... \n\nUser: ... \n\nAssistant: ...
+# MAGIC         """
+# MAGIC         formatted_text = ""
+# MAGIC         for message in messages:
+# MAGIC             if isinstance(message, dict):
+# MAGIC                 role = message["role"]
+# MAGIC                 content = message["content"]
+# MAGIC             elif isinstance(message, list) and len(message) >= 2:
+# MAGIC                 role = message[0]
+# MAGIC                 content = message[1]
+# MAGIC             else:
+# MAGIC                 continue
+# MAGIC                 
+# MAGIC             if role == "system":
+# MAGIC                 formatted_text += f"System: {content}\n\n"
+# MAGIC             elif role == "user":
+# MAGIC                 formatted_text += f"User: {content}\n\n"
+# MAGIC             elif role == "assistant":
+# MAGIC                 formatted_text += f"Assistant: {content}"
+# MAGIC         return formatted_text + "\n\nAssistant:"
 # MAGIC
 # MAGIC     def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
 # MAGIC         outputs = [
@@ -110,19 +133,14 @@ train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 # MAGIC     def generate_output(self, messages_with_system):
 # MAGIC
 # MAGIC       model, tokenizer = self.pipeline.model, self.pipeline.tokenizer
+# MAGIC       
+# MAGIC       prompt = self.format_chat_template(messages_with_system)
 # MAGIC
-# MAGIC       # Usar el chat template nativo del modelo para garantizar el formato correcto en inferencia
-# MAGIC       input_ids = tokenizer.apply_chat_template(
-# MAGIC           messages_with_system,
-# MAGIC           tokenize=True,
-# MAGIC           add_generation_prompt=True,
-# MAGIC           return_tensors="pt",
-# MAGIC       ).to(model.device)
+# MAGIC       inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+# MAGIC       streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True, decode_kwargs={"clean_up_tokenization_spaces": False})
 # MAGIC
-# MAGIC       streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-# MAGIC
+# MAGIC       # Set up generation arguments including max tokens and streamer
 # MAGIC       generation_args = {
-# MAGIC           "input_ids": input_ids,
 # MAGIC           "max_new_tokens": 512,
 # MAGIC           "do_sample": True,
 # MAGIC           "temperature": 0.7,
@@ -130,6 +148,7 @@ train_data_table_name_ft = dbutils.widgets.get("train_data_table_name_ft")
 # MAGIC           "repetition_penalty": 1.15,
 # MAGIC           "pad_token_id": tokenizer.eos_token_id,
 # MAGIC           "streamer": streamer,
+# MAGIC           **inputs
 # MAGIC       }
 # MAGIC       item_id = str(uuid.uuid4())
 # MAGIC
