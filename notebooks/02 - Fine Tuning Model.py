@@ -33,8 +33,8 @@ MODEL_PATH = dbutils.widgets.get("MODEL_PATH")
 # COMMAND ----------
 
 base_model = "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
-output_dir = "/local_disk0/deepseek_finetuned"
-adapter_dir = "/local_disk0/deepseek_lora_adapters"
+output_dir = "/tmp/deepseek_finetuned"
+adapter_dir = "/tmp/deepseek_lora_adapters"
 
 # COMMAND ----------
 
