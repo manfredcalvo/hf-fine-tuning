@@ -51,7 +51,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 # Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(base_model)
+tokenizer = AutoTokenizer.from_pretrained(base_model, clean_up_tokenization_spaces=False)
 tokenizer.pad_token = tokenizer.eos_token  # Set pad token for batch training
 tokenizer.padding_side = "right"  # Pad on the right side for causal LM
 
@@ -80,25 +80,44 @@ print(f"Expected VRAM usage: ~14-16GB during training")
 
 # COMMAND ----------
 
-train_data_table_name_ft = "chat_completion_training_dataset_ft"
-eval_data_table_name_ft = "chat_completion_evaluation_dataset_ft"
+train_data_table_name = "chat_completion_training_dataset"
+eval_data_table_name = "chat_completion_evaluation_dataset"
 
 # COMMAND ----------
 
 import datasets
 from typing import List, Dict
 
-chat_training_df_ft = spark.read.table(f"{CATALOG}.{SCHEMA}.{train_data_table_name_ft}")
-chat_eval_df_ft = spark.read.table(f"{CATALOG}.{SCHEMA}.{eval_data_table_name_ft}")
+chat_training_df = spark.read.table(f"{CATALOG}.{SCHEMA}.{train_data_table_name}")
+chat_eval_df = spark.read.table(f"{CATALOG}.{SCHEMA}.{eval_data_table_name}")
 
-train_data = chat_training_df_ft.collect()
-eval_data = chat_eval_df_ft.collect()
+train_data = chat_training_df.collect()
+eval_data = chat_eval_df.collect()
 
-train_records = [row.asDict() for row in train_data]
-eval_records = [row.asDict() for row in eval_data]
+# asDict(recursive=True) convierte structs anidados de Spark a dicts de Python,
+# necesario para que SFTTrainer pueda leer message["role"] y message["content"]
+train_records = [row.asDict(recursive=True) for row in train_data]
+eval_records = [row.asDict(recursive=True) for row in eval_data]
 
 train_dataset = datasets.Dataset.from_list(train_records)
 eval_dataset = datasets.Dataset.from_list(eval_records)
+
+# Formatear mensajes como texto plano para SFTTrainer
+def apply_template(example):
+    formatted_text = ""
+    for message in example["messages"]:
+        role = message["role"]
+        content = message["content"]
+        if role == "system":
+            formatted_text += f"System: {content}\n\n"
+        elif role == "user":
+            formatted_text += f"User: {content}\n\n"
+        elif role == "assistant":
+            formatted_text += f"Assistant: {content}"
+    return {"text": formatted_text}
+
+train_dataset = train_dataset.map(apply_template)
+eval_dataset = eval_dataset.map(apply_template)
 
 # COMMAND ----------
 
@@ -143,6 +162,9 @@ lora_config = LoraConfig(
 
 from trl import SFTConfig, SFTTrainer
 
+# Packing is not supported for vision-language models (e.g. Gemma multimodal)
+use_packing = not hasattr(model.config, "vision_config")
+
 # Configuración correcta usando SFTConfig
 training_args = SFTConfig(
     output_dir=output_dir,
@@ -167,8 +189,8 @@ training_args = SFTConfig(
     max_steps=-1,  # Entrenar por número de epochs
     report_to="mlflow",  # Reportar a MLflow
     seed=42,
-    packing=True,      # Reemplaza group_by_length, empaqueta secuencias para mayor eficiencia
-    max_length=512,    # Longitud máxima de secuencia, requerido al usar packing
+    packing=use_packing,
+    max_length=512,
 )
 
 # Inicializar SFTTrainer
@@ -231,7 +253,6 @@ import torch
 
 # Obtener una muestra del conjunto de evaluación (sin la respuesta del assistant)
 sample_text = eval_dataset[0]["text"]
-# Extraer solo las partes de system + user (eliminar la respuesta del assistant para la prueba)
 input_text = sample_text.split("Assistant:")[0].strip() + "\n\nAssistant:"
 
 print("=" * 80)
@@ -242,10 +263,8 @@ print("\n" + "=" * 80)
 print("RESPUESTA DEL MODELO:")
 print("=" * 80)
 
-# Tokenizar la entrada y mover al dispositivo del modelo
 inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
-# Generar respuesta usando model.generate()
 with torch.no_grad():
     outputs = model.generate(
         **inputs,
@@ -257,14 +276,10 @@ with torch.no_grad():
         pad_token_id=tokenizer.eos_token_id
     )
 
-# Decodificar la respuesta completa
 full_response = tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=False)
-
-# Extraer solo la parte generada (después del prompt de entrada)
 if full_response.startswith(input_text):
     generated_response = full_response[len(input_text):].strip()
 else:
-    # Alternativa: intentar extraer después de "Assistant:"
     parts = full_response.split("Assistant:", 1)
     generated_response = parts[1].strip() if len(parts) > 1 else full_response
 

@@ -33,35 +33,26 @@ resources:
           environment_key: gpu_environment
           compute:
             hardware_accelerator: GPU_8xH100
-        - task_key: Log_Model
+        - task_key: Model_Deployment
           depends_on:
             - task_key: Model_Fine_Tuning
           notebook_task:
-            notebook_path: ../notebooks/03 - Log Model.py
+            notebook_path: ../notebooks/03_Model_Deployment.py
             base_parameters:
               CATALOG: ${var.catalog}
               SCHEMA: ${var.schema}
               MODEL_NAME: ${var.model_name}
               MODEL_PATH: ${var.model_path}
               BASE_MODEL: ${var.base_model}
+              ENDPOINT_NAME: ${var.endpoint_name}
+              SMOKE_TEST: "false"
             source: WORKSPACE
           environment_key: gpu_environment
           compute:
-            hardware_accelerator: GPU_8xH100
-        - task_key: Deploy_Model
-          depends_on:
-            - task_key: Log_Model
-          notebook_task:
-            notebook_path: ../notebooks/04 - Model Deployment.py
-            base_parameters:
-              CATALOG: ${var.catalog}
-              SCHEMA: ${var.schema}
-              MODEL_NAME: ${var.model_name}
-              ENDPOINT_NAME: ${var.endpoint_name}
-            source: WORKSPACE
+            hardware_accelerator: GPU_1xA10
         - task_key: Model_Evaluation
           depends_on:
-            - task_key: Deploy_Model
+            - task_key: Model_Deployment
           notebook_task:
             notebook_path: ../notebooks/05 - Model Evaluation.py
             base_parameters:

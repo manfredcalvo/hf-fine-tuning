@@ -65,62 +65,45 @@ from databricks.sdk.service.serving import (
     ServedEntityInput,
 )
 from datetime import timedelta
+import time
 
 def create_or_update_serving_endpoint_and_wait(
     name: str,
     config: EndpointCoreConfigInput
 ):
-    """
-    Create or update a Databricks serving endpoint and block until it finishes
-    deploying (READY or FAILED), using the SDK's *and_wait helpers.
-
-    Parameters
-    ----------
-    name : str
-        Serving endpoint name.
-    config : EndpointCoreConfigInput
-        Config of the endpoint with entities to be served.
-
-    Returns
-    -------
-    EndpointCoreInfo
-        Final endpoint info once deployment succeeds.
-
-    Raises
-    ------
-    RuntimeError
-        If deployment ends in FAILED.
-    """
     w = WorkspaceClient()
 
-    # Decide whether to create or update
     try:
-        _ = w.serving_endpoints.get(name)
+        existing = w.serving_endpoints.get(name)
         exists = True
     except Exception:
         exists = False
+        existing = None
 
     if exists:
-        served_entities = config.served_entities
-        # Update config and wait until deployment completes
+        # Wait for any in-progress update to finish before issuing a new one
+        deadline = time.time() + 60 * 60  # 60-minute pre-flight wait
+        while existing.state and str(existing.state.config_update) == "EndpointStateConfigUpdate.IN_PROGRESS":
+            if time.time() > deadline:
+                raise TimeoutError(f"Endpoint {name} still updating after 60 minutes")
+            print(f"Endpoint {name} is currently updating — waiting 30s before retrying...")
+            time.sleep(30)
+            existing = w.serving_endpoints.get(name)
+
         ep = w.serving_endpoints.update_config_and_wait(
             name=name,
-            served_entities=served_entities,
-            timeout=timedelta(minutes=30),
+            served_entities=config.served_entities,
+            timeout=timedelta(minutes=60),
         )
     else:
-        # Create new endpoint and wait until deployment completes
         ep = w.serving_endpoints.create_and_wait(
             name=name,
             config=config,
-            timeout=timedelta(minutes=30)
+            timeout=timedelta(minutes=60),
         )
 
-    # Optional: extra safety check on final state
     if ep.state and ep.state.ready == "FAILED":
-        raise RuntimeError(
-            f"Serving endpoint {name} deployment failed: {ep.state.message}"
-        )
+        raise RuntimeError(f"Serving endpoint {name} deployment failed: {ep.state.message}")
 
     return ep
 
