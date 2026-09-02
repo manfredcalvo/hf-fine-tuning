@@ -422,9 +422,10 @@ print(f"Registered {UC_MODEL_NAME} version {model_version.version}")
 
 # COMMAND ----------
 
+import time
 from datetime import timedelta
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.errors import NotFound
+from databricks.sdk.errors import NotFound, ResourceConflict
 from databricks.sdk.service.serving import EndpointCoreConfigInput, ServedEntityInput
 
 served_entity = ServedEntityInput(
@@ -437,21 +438,45 @@ served_entity = ServedEntityInput(
 )
 
 w = WorkspaceClient()
+
+# Pre-flight: if the endpoint exists and is already being updated, wait for the
+# in-progress update to finish before issuing a new one. GPU endpoint deployments
+# can take well over an hour, and a timed-out _and_wait call leaves the endpoint
+# in IN_PROGRESS — a second attempt would hit ResourceConflict immediately.
+def _wait_for_idle(name, deadline_s=90 * 60):
+    try:
+        ep = w.serving_endpoints.get(name)
+    except NotFound:
+        return
+    while ep.state and str(ep.state.config_update) == "EndpointStateConfigUpdate.IN_PROGRESS":
+        if time.time() > deadline_s:
+            raise TimeoutError(f"Endpoint {name} still updating after 90 minutes")
+        print(f"Endpoint {name} is updating — waiting 60s before retry...")
+        time.sleep(60)
+        ep = w.serving_endpoints.get(name)
+
+_wait_for_idle(ENDPOINT_NAME)
+
 try:
     w.serving_endpoints.get(ENDPOINT_NAME)
     print(f"Endpoint '{ENDPOINT_NAME}' exists, updating to version {model_version.version}...")
     w.serving_endpoints.update_config_and_wait(
         name=ENDPOINT_NAME,
         served_entities=[served_entity],
-        timeout=timedelta(minutes=60),
+        timeout=timedelta(minutes=120),
     )
 except NotFound:
     print(f"Creating endpoint '{ENDPOINT_NAME}'...")
     w.serving_endpoints.create_and_wait(
         name=ENDPOINT_NAME,
         config=EndpointCoreConfigInput(name=ENDPOINT_NAME, served_entities=[served_entity]),
-        timeout=timedelta(minutes=60),
+        timeout=timedelta(minutes=120),
     )
+
+# Final safety check
+ep = w.serving_endpoints.get(ENDPOINT_NAME)
+if str(ep.state.ready) == "ENDPOINT_STATE_FAILED":
+    raise RuntimeError(f"Serving endpoint {ENDPOINT_NAME} deployment failed: {ep.state.message}")
 
 print(f"Endpoint '{ENDPOINT_NAME}' is ready.")
 

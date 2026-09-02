@@ -176,7 +176,7 @@ training_args = SFTConfig(
     optim="adamw_torch",  # Optimizador AdamW de PyTorch
     learning_rate=2e-4,  # Learning rate para LoRA
     lr_scheduler_type="cosine",  # Scheduler de learning rate tipo coseno
-    warmup_ratio=0.03,  # Proporción de warmup
+    warmup_steps=10,  # Pasos de warmup
     logging_steps=10,  # Frecuencia de logging
     eval_strategy="steps",  # Estrategia de evaluación por pasos
     eval_steps=500,  # Evaluar cada 500 pasos
@@ -191,6 +191,7 @@ training_args = SFTConfig(
     seed=42,
     packing=use_packing,
     max_length=512,
+    loss_type="nll",  # Evitar bug de TRL con chunked_nll y functools.partial
 )
 
 # Inicializar SFTTrainer

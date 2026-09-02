@@ -4,9 +4,9 @@ bundle:
 
 variables:
   catalog:
-    default: meli_demo
+    default: users
   schema:
-    default: default
+    default: manffred_calvosanchez
   endpoint_name:
     default: deepseek_ft_playground_rag
   model_list:
@@ -14,7 +14,7 @@ variables:
   model_name:
     default: deepseek_rag_chat_model
   model_path:
-    default: /Volumes/lucas_catalog/default/models/deep_seek_ft_model_1/
+    default: /Volumes/users/manffred_calvosanchez/hf_models/deep_seek_ft_model_1/
   volume:
     default: datasets
   base_model:
